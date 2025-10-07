@@ -155,6 +155,17 @@ if uploaded_file is not None:
     # --- Grid Sampel Warna Modern ---
     st.subheader("🟩 Grid Sampel Warna Otomatis")
     step = st.slider("Jarak sampling grid (px)", min_value=5, max_value=100, value=25, step=1)
+
+    grid_size_label = st.radio(
+        "Ukuran kotak grid",
+        options=["Kecil", "Sedang", "Besar"],
+        index=1,
+        horizontal=True,
+        help="Pilih besar kecil kotak warna pada grid."
+    )
+    grid_size_dict = {"Kecil": 20, "Sedang": 40, "Besar": 60}
+    grid_size = grid_size_dict[grid_size_label]
+
     rows = list(range(0, image_rgb.shape[0], step))
     cols = list(range(0, image_rgb.shape[1], step))
 
@@ -170,10 +181,11 @@ if uploaded_file is not None:
 
     # Tampilkan grid warna dengan preview kotak warna
     def color_cell(hex_color):
-        size = "28px" if is_mobile() else "40px"
+        size = f"{grid_size}px"
+        font_size = "10px" if grid_size < 32 else "12px"
         return f'''
-        <div style="background:{hex_color};width:{size};height:{size};display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid #eee;">
-            <span style="color:#222;font-size:10px;font-family:monospace;text-shadow:0 1px 2px #fff;">{hex_color}</span>
+        <div style="background:{hex_color};width:{size};height:{size};display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid #eee;box-sizing:border-box;">
+            <span style="color:#222;font-size:{font_size};font-family:monospace;text-shadow:0 1px 2px #fff;">{hex_color}</span>
         </div>
         '''
 
