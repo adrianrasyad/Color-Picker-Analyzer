@@ -66,27 +66,30 @@ if uploaded_file is not None:
         st.error("File yang diunggah bukan gambar yang valid.")
         st.stop()
     image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+    image_height, image_width = image_rgb.shape[:2]
 
     # --- Layout Responsif ---
     if is_mobile():
         st.subheader("Klik Gambar untuk Deteksi Warna")
-        # Tampilkan gambar full width di mobile
+        display_width = st.session_state["window_width"] - 32  # padding dikurangi
+        display_height = int(image_height * (display_width / image_width))
         value = streamlit_image_coordinates(
             image_rgb,
             key="image_click",
-            width=st.session_state["window_width"] - 32  # padding dikurangi
+            width=display_width
         )
         st.subheader("Hasil Deteksi Piksel")
         info_container = st.container()
     else:
-        # Dua kolom di desktop/tablet
         col_img, col_info = st.columns([2, 1])
         with col_img:
             st.subheader("Klik Gambar untuk Deteksi Warna")
+            display_width = 700
+            display_height = int(image_height * (display_width / image_width))
             value = streamlit_image_coordinates(
                 image_rgb,
                 key="image_click",
-                width=700  # atau sesuaikan dengan kebutuhan desktop
+                width=display_width
             )
         info_container = col_info
 
@@ -94,42 +97,30 @@ if uploaded_file is not None:
     with info_container:
         st.subheader("Hasil Deteksi Piksel")
 
-        # Perbaikan Logika: Jika tidak ada klik terdeteksi (klik di luar area gambar)
         if value is None:
             st.info("👈 Silakan klik suatu titik **di dalam gambar** di samping.")
         else:
-            # Koordinat yang diklik (x, y)
-            x = value['x']
-            y = value['y']
+            # Koreksi koordinat klik ke ukuran asli gambar
+            x_disp = value['x']
+            y_disp = value['y']
+            x = int(x_disp * image_width / display_width)
+            y = int(y_disp * image_height / display_height)
 
-            # Cek apakah koordinat valid (di dalam batas dimensi gambar)
             if 0 <= y < image_rgb.shape[0] and 0 <= x < image_rgb.shape[1]:
-                # Ambil nilai RGB pada koordinat (y, x)
                 r, g, b = image_rgb[y, x]
-
-                # Konversi RGB ke HEX
                 hex_color = '#{:02x}{:02x}{:02x}'.format(r, g, b)
-
-                # 1. Kotak Warna (Visualisasi)
                 st.markdown("#### Preview Warna")
                 st.markdown(
                     f'<div style="width: 100%; height: 50px; background-color: {hex_color}; border: 1px solid #ccc; border-radius: 5px;"></div>',
                     unsafe_allow_html=True
                 )
-                
                 st.write(f"**Piksel Klik:** ({x}, {y})")
-
-                # 2. Metrik Kode Warna
                 col_hex, col_rgb = st.columns(2)
                 with col_hex:
                     st.metric("HEX", hex_color)
                 with col_rgb:
                     st.metric("RGB", f"({r}, {g}, {b})")
-                    
-                # 3. Bar Chart Nilai Intensitas
                 st.markdown("#### Nilai Intensitas RGB")
-                
-                # Membuat bar chart sederhana untuk nilai RGB
                 fig, ax = plt.subplots(figsize=(4, 2))
                 colors = ['red', 'green', 'blue']
                 ax.bar(['R', 'G', 'B'], [r, g, b], color=colors)
@@ -138,10 +129,7 @@ if uploaded_file is not None:
                 st.pyplot(fig)
                 plt.close(fig)
             else:
-                # Pesan ini jarang muncul karena perbaikan logika sebelumnya, tapi tetap sebagai jaga-jaga
                 st.warning("Klik di luar batas gambar yang valid.")
-
-    
 
     # --- Bagian Analisis Keseluruhan (Histogram) ---
     st.subheader("Analisis Histogram Seluruh Gambar")
