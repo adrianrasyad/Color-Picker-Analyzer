@@ -4,6 +4,31 @@ import numpy as np
 import matplotlib.pyplot as plt
 from streamlit_image_coordinates import streamlit_image_coordinates
 
+# Tambahkan helper untuk deteksi mobile
+def is_mobile():
+    # Streamlit tidak punya deteksi device, pakai lebar window
+    return st.session_state.get("window_width", 1200) < 768
+
+# Inject JS untuk update lebar window ke session_state
+st.markdown("""
+<script>
+    const sendWidth = () => {
+        window.parent.postMessage({streamlitSetFrameHeight: document.body.scrollHeight}, "*");
+        window.parent.postMessage({type: "streamlit:setComponentValue", value: window.innerWidth}, "*");
+        window.localStorage.setItem("window_width", window.innerWidth);
+    };
+    window.addEventListener("resize", sendWidth);
+    sendWidth();
+</script>
+""", unsafe_allow_html=True)
+
+# Ambil lebar window dari localStorage (via JS di atas)
+window_width = st.query_params.get("window_width", 1200)
+try:
+    st.session_state["window_width"] = int(window_width)
+except:
+    st.session_state["window_width"] = 1200
+
 # Konfigurasi halaman: layout wide agar tampilan lebih luas dan judul
 st.set_page_config(layout="wide", page_title="Color Picker & Analyzer")
 st.title("🎨 Penganalisis Warna Gambar Interaktif")
@@ -23,19 +48,29 @@ if uploaded_file is not None:
         st.stop()
     image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
 
-    # 2. Layout Kolom Utama (Rasio 2:1 untuk Gambar dan Info)
-    col_img, col_info = st.columns([2, 1])
-
-    # --- Kolom Gambar (Interaktif) ---
-    with col_img:
+    # --- Layout Responsif ---
+    if is_mobile():
+        # Satu kolom di mobile
         st.subheader("Klik Gambar untuk Deteksi Warna")
         value = streamlit_image_coordinates(
             image_rgb,
             key="image_click"
         )
+        st.subheader("Hasil Deteksi Piksel")
+        info_container = st.container()
+    else:
+        # Dua kolom di desktop/tablet
+        col_img, col_info = st.columns([2, 1])
+        with col_img:
+            st.subheader("Klik Gambar untuk Deteksi Warna")
+            value = streamlit_image_coordinates(
+                image_rgb,
+                key="image_click"
+            )
+        info_container = col_info
 
     # --- Kolom Hasil Deteksi Piksel ---
-    with col_info:
+    with info_container:
         st.subheader("Hasil Deteksi Piksel")
 
         # Perbaikan Logika: Jika tidak ada klik terdeteksi (klik di luar area gambar)
@@ -91,7 +126,7 @@ if uploaded_file is not None:
     st.subheader("Analisis Histogram Seluruh Gambar")
     
     # Membuat figure untuk histogram
-    fig_hist, ax_hist = plt.subplots(figsize=(10, 4))
+    fig_hist, ax_hist = plt.subplots(figsize=(6 if is_mobile() else 10, 3 if is_mobile() else 4))
     
     # Menghitung Histogram untuk setiap channel (R, G, B)
     for i, color in enumerate(['R', 'G', 'B']):
@@ -110,8 +145,6 @@ if uploaded_file is not None:
 
     # --- Grid Sampel Warna Modern ---
     st.subheader("🟩 Grid Sampel Warna Otomatis")
-
-    # Sampling setiap N piksel (misal: 25px)
     step = st.slider("Jarak sampling grid (px)", min_value=5, max_value=100, value=25, step=1)
     rows = list(range(0, image_rgb.shape[0], step))
     cols = list(range(0, image_rgb.shape[1], step))
@@ -128,9 +161,10 @@ if uploaded_file is not None:
 
     # Tampilkan grid warna dengan preview kotak warna
     def color_cell(hex_color):
+        size = "28px" if is_mobile() else "40px"
         return f'''
-        <div style="background:{hex_color};width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid #eee;">
-            <span style="color:#222;font-size:11px;font-family:monospace;text-shadow:0 1px 2px #fff;">{hex_color}</span>
+        <div style="background:{hex_color};width:{size};height:{size};display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid #eee;">
+            <span style="color:#222;font-size:10px;font-family:monospace;text-shadow:0 1px 2px #fff;">{hex_color}</span>
         </div>
         '''
 
