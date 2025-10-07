@@ -38,6 +38,25 @@ st.markdown("Unggah gambar, lalu **klik** pada warna di gambar untuk menampilkan
 st.subheader("Unggah Gambar")
 uploaded_file = st.file_uploader("Drag and drop file here", type=["jpg", "jpeg", "png"], label_visibility="collapsed")
 
+# Tambahkan CSS agar gambar dan container full width di mobile
+st.markdown("""
+<style>
+@media (max-width: 768px) {
+    .element-container:has(img) {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    img {
+        width: 100% !important;
+        height: auto !important;
+        display: block;
+        margin: 0 auto;
+        border-radius: 10px;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
 # Logika Pemrosesan Gambar
 if uploaded_file is not None:
     # Membaca file gambar
@@ -50,11 +69,12 @@ if uploaded_file is not None:
 
     # --- Layout Responsif ---
     if is_mobile():
-        # Satu kolom di mobile
         st.subheader("Klik Gambar untuk Deteksi Warna")
+        # Tampilkan gambar full width di mobile
         value = streamlit_image_coordinates(
             image_rgb,
-            key="image_click"
+            key="image_click",
+            width=st.session_state["window_width"] - 32  # padding dikurangi
         )
         st.subheader("Hasil Deteksi Piksel")
         info_container = st.container()
@@ -65,7 +85,8 @@ if uploaded_file is not None:
             st.subheader("Klik Gambar untuk Deteksi Warna")
             value = streamlit_image_coordinates(
                 image_rgb,
-                key="image_click"
+                key="image_click",
+                width=700  # atau sesuaikan dengan kebutuhan desktop
             )
         info_container = col_info
 
